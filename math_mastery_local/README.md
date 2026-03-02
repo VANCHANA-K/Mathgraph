@@ -33,9 +33,7 @@ pip install -r requirements.txt
 ## Run
 
 ```bash
-python app/cli.py init-db
-python app/cli.py seed
-python app/cli.py graph-test
+python app/cli.py
 streamlit run app/ui_streamlit.py
 ```
 
@@ -50,4 +48,4 @@ streamlit run app/ui_streamlit.py
 ## Day 3 readiness
 
 - SQLite schema includes: `topics`, `items`, `attempts`, `mastery_state`.
-- CLI supports `init-db` and `seed` to initialize DB and seed topics/items.
+- CLI seeds DB (`python app/cli.py`) by running init + topic/item seed.

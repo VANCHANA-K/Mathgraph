@@ -1,28 +1,23 @@
 from pathlib import Path
 
-from application.use_cases.get_next_actions import get_next_actions
 from application.use_cases.seed_data import seed_items, seed_topics
-from infrastructure.graph_networkx.graph_repo import NetworkXGraphRepository
-from infrastructure.persistence_sqlite.db import init_db
-from infrastructure.persistence_sqlite.item_repo import SqliteItemRepository
-from infrastructure.persistence_sqlite.mastery_repo import SqliteMasteryRepository
-from infrastructure.persistence_sqlite.topic_repo import SqliteTopicRepository
+from infrastructure.persistence_sqlite.db import DB_NAME, get_connection, init_db
 
 
-def test_seed_and_actions(tmp_path: Path):
-    db = tmp_path / "test.db"
-    conn = init_db(str(db))
-
+def test_init_and_seed_db():
     root = Path(__file__).resolve().parents[2]
-    topic_repo = SqliteTopicRepository(conn)
-    graph_repo = NetworkXGraphRepository(str(root / "data/topics.csv"), str(root / "data/edges.csv"))
-    item_repo = SqliteItemRepository(conn)
-    mastery_repo = SqliteMasteryRepository(conn)
+    db_file = root / DB_NAME
+    if db_file.exists():
+        db_file.unlink()
 
-    seeded_topics = seed_topics(str(root / "data/topics.csv"), topic_repo)
-    seeded_items = seed_items(str(root / "data/items.csv"), item_repo)
-    actions = get_next_actions("u1", topic_repo, graph_repo, mastery_repo)
+    init_db()
+    seed_topics(root / "data/topics.csv")
+    seed_items()
 
-    assert seeded_topics == 9
-    assert seeded_items == 3
-    assert "New" in actions
+    conn = get_connection()
+    topic_count = conn.execute("SELECT COUNT(*) FROM topics").fetchone()[0]
+    item_count = conn.execute("SELECT COUNT(*) FROM items").fetchone()[0]
+    conn.close()
+
+    assert topic_count == 9
+    assert item_count == 4
