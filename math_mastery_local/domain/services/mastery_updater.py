@@ -1,32 +1,25 @@
-from datetime import datetime
-
-from domain.entities.mastery_state import MasteryState
+import math
+from datetime import datetime, timedelta
 
 
 class MasteryUpdater:
-    @staticmethod
-    def update(
-        state: MasteryState,
-        *,
-        is_correct: bool,
-        response_seconds: int,
-        used_hint: bool,
-        now: datetime,
-    ) -> MasteryState:
-        delta = 0.12 if is_correct else -0.15
-        if response_seconds > 90:
-            delta -= 0.03
-        elif response_seconds < 30:
-            delta += 0.02
-        if used_hint:
-            delta -= 0.05
+    def __init__(self, learning_rate=0.3):
+        self.lr = learning_rate
 
-        state.mastery = min(1.0, max(0.0, state.mastery + delta))
+    def update(self, current_mastery, correct, difficulty, stability):
+        """Update mastery score (0..1)."""
+        score = 1.0 if correct else 0.0
+        weight = 1 + difficulty
 
-        if is_correct:
-            state.stability = min(365.0, state.stability * 1.25)
+        delta = self.lr * (score - current_mastery) * weight
+        new_mastery = max(0.0, min(1.0, current_mastery + delta))
+
+        if correct:
+            new_stability = stability * 1.2
         else:
-            state.stability = max(1.0, state.stability * 0.6)
+            new_stability = max(0.5, stability * 0.7)
 
-        state.last_practiced_at = now
-        return state
+        days = max(1, int(math.log2(new_stability + 1) * 3))
+        due_at = datetime.now() + timedelta(days=days)
+
+        return new_mastery, new_stability, due_at

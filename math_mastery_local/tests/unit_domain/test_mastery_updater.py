@@ -1,11 +1,19 @@
-from datetime import datetime
-
-from domain.entities.mastery_state import MasteryState
 from domain.services.mastery_updater import MasteryUpdater
 
 
-def test_mastery_increases_on_correct_attempt():
-    st = MasteryState(user_id="u", topic_id="t", mastery=0.2, stability=2)
-    out = MasteryUpdater.update(st, is_correct=True, response_seconds=25, used_hint=False, now=datetime.utcnow())
-    assert out.mastery > 0.2
-    assert out.stability > 2
+def test_mastery_and_stability_change_on_correct_attempt():
+    updater = MasteryUpdater(learning_rate=0.3)
+    new_mastery, new_stability, due_at = updater.update(0.4, True, 0.5, 1.0)
+
+    assert new_mastery > 0.4
+    assert new_stability > 1.0
+    assert due_at is not None
+
+
+def test_mastery_drops_on_incorrect_attempt():
+    updater = MasteryUpdater(learning_rate=0.3)
+    new_mastery, new_stability, due_at = updater.update(0.6, False, 0.5, 2.0)
+
+    assert new_mastery < 0.6
+    assert new_stability < 2.0
+    assert due_at is not None
