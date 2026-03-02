@@ -1,4 +1,4 @@
 item_id,topic_id,question,answer,difficulty
-a1,arith,2+3=?,5,0.2
-alg1,algebra,Solve x: x+2=5,3,0.5
-g1,geometry,How many degrees in a triangle?,180,0.4
+i001,T001,17 + 25 = ?,42,0.2
+i003,T003,6 x 7 = ?,42,0.3
+i030,T030,Solve x: 2x + 3 = 11,4,0.6

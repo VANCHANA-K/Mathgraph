@@ -33,7 +33,9 @@ pip install -r requirements.txt
 ## Run
 
 ```bash
+python app/cli.py init-db
 python app/cli.py seed
+python app/cli.py graph-test
 streamlit run app/ui_streamlit.py
 ```
 
@@ -43,3 +45,9 @@ streamlit run app/ui_streamlit.py
 - [x] Virtual environment command documented
 - [ ] `pip install -r requirements.txt` completed in local machine
 - [x] `README.md` + `.gitignore` prepared
+
+
+## Day 3 readiness
+
+- SQLite schema includes: `topics`, `items`, `attempts`, `mastery_state`.
+- CLI supports `init-db` and `seed` to initialize DB and seed topics/items.

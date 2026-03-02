@@ -1,4 +1,5 @@
 import csv
+import sqlite3
 
 from domain.entities.topic import Topic
 
@@ -23,3 +24,28 @@ class CsvTopicRepository:
             if topic.topic_id == topic_id:
                 return topic
         return None
+
+
+class SqliteTopicRepository:
+    def __init__(self, conn: sqlite3.Connection):
+        self.conn = conn
+
+    def list_topics(self) -> list[Topic]:
+        rows = self.conn.execute("SELECT topic_id, name, description FROM topics ORDER BY topic_id").fetchall()
+        return [Topic(topic_id=r["topic_id"], name=r["name"], description=r["description"]) for r in rows]
+
+    def get_topic(self, topic_id: str) -> Topic | None:
+        row = self.conn.execute("SELECT topic_id, name, description FROM topics WHERE topic_id=?", (topic_id,)).fetchone()
+        if not row:
+            return None
+        return Topic(topic_id=row["topic_id"], name=row["name"], description=row["description"])
+
+    def upsert_topic(self, topic: Topic) -> None:
+        self.conn.execute(
+            """INSERT INTO topics(topic_id, name, description)
+               VALUES(?,?,?)
+               ON CONFLICT(topic_id) DO UPDATE SET
+               name=excluded.name, description=excluded.description""",
+            (topic.topic_id, topic.name, topic.description),
+        )
+        self.conn.commit()
