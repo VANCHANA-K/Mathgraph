@@ -1,13 +1,28 @@
-import pandas as pd
+import csv
 
 from infrastructure.persistence_sqlite.db import get_connection
 
 
 def seed_topics(topics_path):
     conn = get_connection()
-    df = pd.read_csv(topics_path)
+    cursor = conn.cursor()
 
-    df.to_sql("topics", conn, if_exists="replace", index=False)
+    with open(topics_path, newline="", encoding="utf-8") as csvfile:
+        reader = csv.DictReader(csvfile)
+        topics = [
+            (row["id"], row["title"], row["domain"], int(row["level"]))
+            for row in reader
+        ]
+
+    cursor.executemany(
+        """
+        INSERT OR REPLACE INTO topics (id, title, domain, level)
+        VALUES (?, ?, ?, ?)
+        """,
+        topics,
+    )
+
+    conn.commit()
     conn.close()
 
 
