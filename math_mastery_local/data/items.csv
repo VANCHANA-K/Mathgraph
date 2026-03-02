@@ -1,0 +1,4 @@
+item_id,topic_id,question,answer,difficulty
+a1,arith,2+3=?,5,0.2
+alg1,algebra,Solve x: x+2=5,3,0.5
+g1,geometry,How many degrees in a triangle?,180,0.4
