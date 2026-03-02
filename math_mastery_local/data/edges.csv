@@ -1,3 +1,8 @@
-prereq_topic_id,topic_id
-arith,algebra
-arith,geometry
+src,dst
+T001,T003
+T003,T010
+T010,T011
+T011,T020
+T020,T030
+T030,T040
+T040,T050

@@ -15,7 +15,7 @@ def test_seed_and_actions(tmp_path: Path):
     init_schema(conn)
     root = Path(__file__).resolve().parents[2]
     topic_repo = CsvTopicRepository(str(root / "data/topics.csv"))
-    graph_repo = NetworkXGraphRepository(str(root / "data/edges.csv"))
+    graph_repo = NetworkXGraphRepository(str(root / "data/topics.csv"), str(root / "data/edges.csv"))
     item_repo = SqliteItemRepository(conn)
     mastery_repo = SqliteMasteryRepository(conn)
 
