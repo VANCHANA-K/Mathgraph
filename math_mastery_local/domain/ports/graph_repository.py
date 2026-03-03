@@ -1,0 +1,6 @@
+from typing import Protocol
+
+
+class GraphRepository(Protocol):
+    def prerequisites_of(self, topic_id: str) -> list[str]: ...
+    def children_of(self, topic_id: str) -> list[str]: ...

@@ -1,0 +1,9 @@
+from typing import Protocol
+
+from domain.entities.mastery_state import MasteryState
+
+
+class MasteryRepository(Protocol):
+    def get_state(self, user_id: str, topic_id: str) -> MasteryState | None: ...
+    def upsert_state(self, state: MasteryState) -> None: ...
+    def list_states(self, user_id: str) -> list[MasteryState]: ...
