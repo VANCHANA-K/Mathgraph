@@ -115,3 +115,15 @@ if rows:
         )
 else:
     st.write("No mastery data yet.")
+
+st.divider()
+st.header("🧠 Knowledge Graph")
+
+plotly_available = __import__("importlib").util.find_spec("plotly") is not None
+if plotly_available:
+    from infrastructure.graph_networkx.graph_visualizer import generate_graph_figure
+
+    fig = generate_graph_figure(graph_repo, mastery_repo)
+    st.plotly_chart(fig, use_container_width=True)
+else:
+    st.warning("Plotly is not installed in this environment, so graph visualization is unavailable.")
