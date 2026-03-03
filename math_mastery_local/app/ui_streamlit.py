@@ -10,6 +10,7 @@ from application.use_cases.generate_session import generate_session
 from application.use_cases.get_next_actions import get_next_actions
 from application.use_cases.seed_data import seed_items, seed_topics
 from application.use_cases.submit_attempt import submit_attempt
+from domain.services.graph_intelligence import GraphIntelligence
 from domain.services.weak_node_detector import WeakNodeDetector
 from infrastructure.graph_networkx.graph_repo import NetworkXGraphRepository
 from infrastructure.persistence_sqlite.attempt_repo import AttemptRepository
@@ -173,6 +174,25 @@ if weak_topics:
     st.write(weak_topics)
 else:
     st.write("No weak topics detected.")
+
+
+st.divider()
+st.header("🧭 Curriculum Intelligence")
+
+intelligence = GraphIntelligence(graph_repo, mastery_repo)
+bottlenecks = intelligence.get_bottlenecks()
+central = intelligence.get_central_topics()
+
+st.subheader("⚠ Bottleneck Topics")
+if bottlenecks:
+    for node, downstream in bottlenecks:
+        st.write(f"{node} (blocking {downstream} topics)")
+else:
+    st.write("No major bottlenecks.")
+
+st.subheader("⭐ High Importance Topics")
+for node in central:
+    st.write(node)
 
 st.divider()
 st.header("🧠 Knowledge Graph")
