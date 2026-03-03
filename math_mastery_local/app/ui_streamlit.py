@@ -31,8 +31,10 @@ if "session" not in st.session_state:
     st.session_state.session = None
 if "index" not in st.session_state:
     st.session_state.index = 0
-if "answer_input" not in st.session_state:
-    st.session_state.answer_input = ""
+if "last_feedback" not in st.session_state:
+    st.session_state.last_feedback = None
+if "last_mastery" not in st.session_state:
+    st.session_state.last_mastery = None
 
 st.title("📚 Math Mastery System (Local MVP)")
 
@@ -43,9 +45,19 @@ if st.button("Start Session"):
 
     st.session_state.session = all_items
     st.session_state.index = 0
-    st.session_state.answer_input = ""
+    st.session_state.last_feedback = None
+    st.session_state.last_mastery = None
 
 if st.session_state.session:
+    if st.session_state.last_feedback:
+        kind, message = st.session_state.last_feedback
+        if kind == "success":
+            st.success(message)
+        else:
+            st.error(message)
+    if st.session_state.last_mastery:
+        st.write(st.session_state.last_mastery)
+
     idx = st.session_state.index
     session = st.session_state.session
 
@@ -55,7 +67,7 @@ if st.session_state.session:
         st.subheader(f"Question {idx + 1}/{len(session)}")
         st.write(question)
 
-        st.text_input("Your answer", key="answer_input")
+        answer = st.text_input("Your answer", key=f"answer_{idx}")
 
         if st.button("Submit Answer"):
             conn = get_connection()
@@ -69,7 +81,7 @@ if st.session_state.session:
                 st.error("Item not found in database.")
             else:
                 topic_id, correct_answer = row
-                user_answer = st.session_state.answer_input.strip()
+                user_answer = answer.strip()
                 is_correct = user_answer == str(correct_answer).strip()
 
                 before, after, due_at = submit_attempt(
@@ -79,22 +91,23 @@ if st.session_state.session:
                 )
 
                 if is_correct:
-                    st.success("✅ Correct!")
+                    st.session_state.last_feedback = ("success", "✅ Correct!")
                 else:
-                    st.error(f"❌ Wrong! Correct answer: {correct_answer}")
+                    st.session_state.last_feedback = ("error", f"❌ Wrong! Correct answer: {correct_answer}")
 
-                st.write(f"Mastery updated: {round(before, 3)} → {round(after, 3)}")
-                st.write(f"Next review: {due_at}")
+                st.session_state.last_mastery = (
+                    f"Mastery updated: {round(before, 3)} → {round(after, 3)} | Next review: {due_at}"
+                )
 
                 st.session_state.index += 1
-                st.session_state.answer_input = ""
                 st.rerun()
     else:
         st.success("🎉 Session Completed!")
         if st.button("Start New Session"):
             st.session_state.session = None
             st.session_state.index = 0
-            st.session_state.answer_input = ""
+            st.session_state.last_feedback = None
+            st.session_state.last_mastery = None
             st.rerun()
 else:
     st.info("Click **Start Session** to begin.")
