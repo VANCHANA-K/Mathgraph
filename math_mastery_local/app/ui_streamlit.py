@@ -10,7 +10,9 @@ from application.use_cases.generate_session import generate_session
 from application.use_cases.get_next_actions import get_next_actions
 from application.use_cases.seed_data import seed_items, seed_topics
 from application.use_cases.submit_attempt import submit_attempt
+from domain.services.weak_node_detector import WeakNodeDetector
 from infrastructure.graph_networkx.graph_repo import NetworkXGraphRepository
+from infrastructure.persistence_sqlite.attempt_repo import AttemptRepository
 from infrastructure.persistence_sqlite.db import init_db
 from infrastructure.persistence_sqlite.item_repo import ItemRepository
 from infrastructure.persistence_sqlite.mastery_repo import MasteryRepository
@@ -26,6 +28,7 @@ seed_items()
 graph_repo = NetworkXGraphRepository(topics_path, edges_path)
 mastery_repo = MasteryRepository()
 item_repo = ItemRepository()
+attempt_repo = AttemptRepository()
 
 if "session" not in st.session_state:
     st.session_state.session = None
@@ -35,6 +38,10 @@ if "last_feedback" not in st.session_state:
     st.session_state.last_feedback = None
 if "last_mastery" not in st.session_state:
     st.session_state.last_mastery = None
+if "streak" not in st.session_state:
+    st.session_state.streak = 0
+if "adaptive_note" not in st.session_state:
+    st.session_state.adaptive_note = None
 
 st.title("📚 Math Mastery System (Local MVP)")
 
@@ -45,8 +52,10 @@ if st.button("Start Session"):
 
     st.session_state.session = all_items
     st.session_state.index = 0
+    st.session_state.streak = 0
     st.session_state.last_feedback = None
     st.session_state.last_mastery = None
+    st.session_state.adaptive_note = None
 
 if st.session_state.session:
     if st.session_state.last_feedback:
@@ -57,6 +66,12 @@ if st.session_state.session:
             st.error(message)
     if st.session_state.last_mastery:
         st.write(st.session_state.last_mastery)
+    if st.session_state.adaptive_note:
+        note_kind, note_message = st.session_state.adaptive_note
+        if note_kind == "warning":
+            st.warning(note_message)
+        else:
+            st.success(note_message)
 
     idx = st.session_state.index
     session = st.session_state.session
@@ -80,17 +95,31 @@ if st.session_state.session:
 
             if is_correct:
                 st.session_state.last_feedback = ("success", "Correct!")
+                st.session_state.streak += 1
             else:
                 st.session_state.last_feedback = (
                     "error",
                     f"Wrong! Correct answer: {correct_answer}",
                 )
+                st.session_state.streak -= 1
 
             st.session_state.last_mastery = (
                 f"Mastery: {round(before, 3)} → {round(after, 3)} | Next review: {due_at}"
             )
 
-            st.session_state.index += 1
+            # Adaptive pivot heuristics
+            if st.session_state.streak <= -2:
+                st.session_state.adaptive_note = ("warning", "⚠ Switching to remediate topic")
+                st.session_state.index += 1
+                st.session_state.streak = 0
+            elif st.session_state.streak >= 3:
+                st.session_state.adaptive_note = ("success", "🚀 Increasing difficulty")
+                st.session_state.streak = 0
+                st.session_state.index += 1
+            else:
+                st.session_state.adaptive_note = None
+                st.session_state.index += 1
+
             st.rerun()
     else:
         st.success("🎉 Session Completed!")
@@ -99,6 +128,8 @@ if st.session_state.session:
             st.session_state.index = 0
             st.session_state.last_feedback = None
             st.session_state.last_mastery = None
+            st.session_state.streak = 0
+            st.session_state.adaptive_note = None
             st.rerun()
 else:
     st.info("Click **Start Session** to begin.")
@@ -115,6 +146,17 @@ if rows:
         )
 else:
     st.write("No mastery data yet.")
+
+st.divider()
+st.header("⚠ Weak Topics")
+
+detector = WeakNodeDetector(attempt_repo)
+weak_topics = detector.get_weak_topics()
+
+if weak_topics:
+    st.write(weak_topics)
+else:
+    st.write("No weak topics detected.")
 
 st.divider()
 st.header("🧠 Knowledge Graph")
