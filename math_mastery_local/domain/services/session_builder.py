@@ -20,20 +20,11 @@ class SessionBuilder:
             items = []
             for topic_id in topics:
                 topic_items = self.item_repo.get_items_by_topic(topic_id)
-                items.extend(topic_items)
-
-            if not items or n <= 0:
-                return []
+                for item in topic_items:
+                    items.append(item)
 
             random.shuffle(items)
-            if len(items) >= n:
-                return items[:n]
-
-            # Not enough unique items: cycle so we can still fill a full session.
-            picked = []
-            while len(picked) < n:
-                picked.extend(items)
-            return picked[:n]
+            return items[:n]
 
         session["review"] = pick_items(actions.get("review", []), review_n)
         session["remediate"] = pick_items(actions.get("remediate", []), remediate_n)

@@ -11,7 +11,7 @@ from application.use_cases.get_next_actions import get_next_actions
 from application.use_cases.seed_data import seed_items, seed_topics
 from application.use_cases.submit_attempt import submit_attempt
 from infrastructure.graph_networkx.graph_repo import NetworkXGraphRepository
-from infrastructure.persistence_sqlite.db import get_connection, init_db
+from infrastructure.persistence_sqlite.db import init_db
 from infrastructure.persistence_sqlite.item_repo import ItemRepository
 from infrastructure.persistence_sqlite.mastery_repo import MasteryRepository
 
@@ -62,45 +62,36 @@ if st.session_state.session:
     session = st.session_state.session
 
     if idx < len(session):
-        item_id, question, difficulty = session[idx]
+        item_id, topic_id, question, correct_answer, difficulty = session[idx]
 
-        st.subheader(f"Question {idx + 1}/{len(session)}")
+        st.subheader(f"Question {idx + 1}")
         st.write(question)
 
-        answer = st.text_input("Your answer", key=f"answer_{idx}")
+        answer = st.text_input("Your answer", key=f"ans_{idx}")
 
-        if st.button("Submit Answer"):
-            conn = get_connection()
-            row = conn.execute(
-                "SELECT topic_id, correct_answer FROM items WHERE id=?",
-                (item_id,),
-            ).fetchone()
-            conn.close()
+        if st.button("Submit", key=f"btn_{idx}"):
+            is_correct = answer.strip() == str(correct_answer).strip()
 
-            if row is None:
-                st.error("Item not found in database.")
+            before, after, due_at = submit_attempt(
+                topic_id=topic_id,
+                correct=is_correct,
+                difficulty=difficulty,
+            )
+
+            if is_correct:
+                st.session_state.last_feedback = ("success", "Correct!")
             else:
-                topic_id, correct_answer = row
-                user_answer = answer.strip()
-                is_correct = user_answer == str(correct_answer).strip()
-
-                before, after, due_at = submit_attempt(
-                    topic_id=topic_id,
-                    correct=is_correct,
-                    difficulty=difficulty,
+                st.session_state.last_feedback = (
+                    "error",
+                    f"Wrong! Correct answer: {correct_answer}",
                 )
 
-                if is_correct:
-                    st.session_state.last_feedback = ("success", "✅ Correct!")
-                else:
-                    st.session_state.last_feedback = ("error", f"❌ Wrong! Correct answer: {correct_answer}")
+            st.session_state.last_mastery = (
+                f"Mastery: {round(before, 3)} → {round(after, 3)} | Next review: {due_at}"
+            )
 
-                st.session_state.last_mastery = (
-                    f"Mastery updated: {round(before, 3)} → {round(after, 3)} | Next review: {due_at}"
-                )
-
-                st.session_state.index += 1
-                st.rerun()
+            st.session_state.index += 1
+            st.rerun()
     else:
         st.success("🎉 Session Completed!")
         if st.button("Start New Session"):
@@ -111,3 +102,16 @@ if st.session_state.session:
             st.rerun()
 else:
     st.info("Click **Start Session** to begin.")
+
+st.divider()
+st.header("📊 Mastery Dashboard")
+
+rows = mastery_repo.get_all_mastery()
+
+if rows:
+    for topic_id, mastery, stability, due_at in rows:
+        st.write(
+            f"{topic_id} | Mastery: {round(mastery, 2)} | Stability: {round(stability, 2)}"
+        )
+else:
+    st.write("No mastery data yet.")

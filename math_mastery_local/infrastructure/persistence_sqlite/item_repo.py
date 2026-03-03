@@ -27,23 +27,20 @@ class SqliteItemRepository:
         self.conn.commit()
 
 
-def get_items_by_topic(topic_id):
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute(
-        """
-    SELECT id, question, difficulty FROM items
-    WHERE topic_id=?
-    """,
-        (topic_id,),
-    )
-
-    rows = cursor.fetchall()
-    conn.close()
-    return rows
-
-
 class ItemRepository:
     def get_items_by_topic(self, topic_id):
-        return get_items_by_topic(topic_id)
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """
+            SELECT id, topic_id, question, correct_answer, difficulty
+            FROM items
+            WHERE topic_id=?
+            """,
+            (topic_id,),
+        )
+
+        rows = cursor.fetchall()
+        conn.close()
+        return rows
