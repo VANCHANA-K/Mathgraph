@@ -147,6 +147,22 @@ if rows:
 else:
     st.write("No mastery data yet.")
 
+
+st.divider()
+st.header("📈 Learning Velocity")
+
+recent = attempt_repo.get_recent_attempts()
+
+if recent:
+    total = len(recent)
+    correct = sum([r[1] for r in recent])
+    accuracy = correct / total
+
+    st.write(f"Recent Accuracy: {round(accuracy * 100, 1)}%")
+    st.write(f"Attempts: {total}")
+else:
+    st.write("No recent data")
+
 st.divider()
 st.header("⚠ Weak Topics")
 

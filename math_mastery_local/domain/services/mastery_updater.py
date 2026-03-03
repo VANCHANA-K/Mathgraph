@@ -1,25 +1,33 @@
-import math
 from datetime import datetime, timedelta
 
 
 class MasteryUpdater:
-    def __init__(self, learning_rate=0.3):
+    def __init__(self, learning_rate=0.4):
         self.lr = learning_rate
 
     def update(self, current_mastery, correct, difficulty, stability):
-        """Update mastery score (0..1)."""
         score = 1.0 if correct else 0.0
-        weight = 1 + difficulty
 
-        delta = self.lr * (score - current_mastery) * weight
+        # difficulty weighting
+        weight = 1 + difficulty * 1.5
+
+        # confidence-aware smoothing: bigger uncertainty -> smaller update
+        confidence_factor = 1 - abs(score - current_mastery) * 0.5
+
+        # softer penalty on wrong answers to avoid sharp collapses
+        penalty_scale = 1.0 if correct else 0.25
+
+        delta = self.lr * (score - current_mastery) * confidence_factor * weight * penalty_scale
+
         new_mastery = max(0.0, min(1.0, current_mastery + delta))
 
+        # improved stability logic
         if correct:
-            new_stability = stability * 1.2
+            new_stability = stability * 1.1
         else:
-            new_stability = max(0.5, stability * 0.7)
+            new_stability = stability * 0.8
 
-        days = max(1, int(math.log2(new_stability + 1) * 3))
+        days = max(1, int(2 + new_stability * 5))
         due_at = datetime.now() + timedelta(days=days)
 
         return new_mastery, new_stability, due_at
