@@ -1,67 +1,100 @@
-import os
 import sys
 from pathlib import Path
 
 import streamlit as st
 
-BASE_DIR = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(BASE_DIR))
+base_path = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(base_path))
 
 from application.use_cases.generate_session import generate_session
 from application.use_cases.get_next_actions import get_next_actions
-from application.use_cases.get_topic_report import get_topic_report
+from application.use_cases.seed_data import seed_items, seed_topics
 from application.use_cases.submit_attempt import submit_attempt
 from infrastructure.graph_networkx.graph_repo import NetworkXGraphRepository
-from infrastructure.persistence_sqlite.attempt_repo import SqliteAttemptRepository
-from infrastructure.persistence_sqlite.db import connect, init_schema
-from infrastructure.persistence_sqlite.item_repo import SqliteItemRepository
-from infrastructure.persistence_sqlite.mastery_repo import SqliteMasteryRepository
-from infrastructure.persistence_sqlite.topic_repo import CsvTopicRepository
+from infrastructure.persistence_sqlite.db import get_connection, init_db
+from infrastructure.persistence_sqlite.item_repo import ItemRepository
+from infrastructure.persistence_sqlite.mastery_repo import MasteryRepository
 
-DB_PATH = os.getenv("DATABASE_PATH", str(BASE_DIR / "math_mastery.db"))
-USER_ID = os.getenv("DEFAULT_USER_ID", "local_user")
 
-conn = connect(DB_PATH)
-init_schema(conn)
-topic_repo = CsvTopicRepository(str(BASE_DIR / "data/topics.csv"))
-graph_repo = NetworkXGraphRepository(str(BASE_DIR / "data/edges.csv"))
-item_repo = SqliteItemRepository(conn)
-attempt_repo = SqliteAttemptRepository(conn)
-mastery_repo = SqliteMasteryRepository(conn)
+topics_path = base_path / "data" / "topics.csv"
+edges_path = base_path / "data" / "edges.csv"
 
-st.title("Math Mastery Local MVP")
+init_db()
+seed_topics(topics_path)
+seed_items()
 
-if st.button("Start session"):
-    actions = get_next_actions(USER_ID, topic_repo, graph_repo, mastery_repo)
-    session = generate_session(actions, minutes=20)
-    st.session_state["session_topics"] = session["topics"]
-    st.write("Session plan:", session)
+graph_repo = NetworkXGraphRepository(topics_path, edges_path)
+mastery_repo = MasteryRepository()
+item_repo = ItemRepository()
 
-st.subheader("Do one problem")
-all_topics = topic_repo.list_topics()
-topic_id = st.selectbox("Topic", [t.topic_id for t in all_topics])
-items = item_repo.list_items_by_topic(topic_id)
-if items:
-    item = items[0]
-    st.write(item.question)
-    is_correct = st.checkbox("Mark as correct")
-    response_seconds = st.slider("Response seconds", 5, 180, 60)
-    used_hint = st.checkbox("Used hint")
-    if st.button("Submit attempt"):
-        state = submit_attempt(
-            USER_ID,
-            item.item_id,
-            topic_id,
-            is_correct,
-            response_seconds,
-            used_hint,
-            attempt_repo,
-            mastery_repo,
-        )
-        st.success(f"Updated mastery={state.mastery:.2f}, due={state.due_at}")
+if "session" not in st.session_state:
+    st.session_state.session = None
+if "index" not in st.session_state:
+    st.session_state.index = 0
+if "answer_input" not in st.session_state:
+    st.session_state.answer_input = ""
+
+st.title("📚 Math Mastery System (Local MVP)")
+
+if st.button("Start Session"):
+    actions = get_next_actions(graph_repo, mastery_repo)
+    session = generate_session(actions, item_repo)
+    all_items = session["review"] + session["remediate"] + session["new"]
+
+    st.session_state.session = all_items
+    st.session_state.index = 0
+    st.session_state.answer_input = ""
+
+if st.session_state.session:
+    idx = st.session_state.index
+    session = st.session_state.session
+
+    if idx < len(session):
+        item_id, question, difficulty = session[idx]
+
+        st.subheader(f"Question {idx + 1}/{len(session)}")
+        st.write(question)
+
+        st.text_input("Your answer", key="answer_input")
+
+        if st.button("Submit Answer"):
+            conn = get_connection()
+            row = conn.execute(
+                "SELECT topic_id, correct_answer FROM items WHERE id=?",
+                (item_id,),
+            ).fetchone()
+            conn.close()
+
+            if row is None:
+                st.error("Item not found in database.")
+            else:
+                topic_id, correct_answer = row
+                user_answer = st.session_state.answer_input.strip()
+                is_correct = user_answer == str(correct_answer).strip()
+
+                before, after, due_at = submit_attempt(
+                    topic_id=topic_id,
+                    correct=is_correct,
+                    difficulty=difficulty,
+                )
+
+                if is_correct:
+                    st.success("✅ Correct!")
+                else:
+                    st.error(f"❌ Wrong! Correct answer: {correct_answer}")
+
+                st.write(f"Mastery updated: {round(before, 3)} → {round(after, 3)}")
+                st.write(f"Next review: {due_at}")
+
+                st.session_state.index += 1
+                st.session_state.answer_input = ""
+                st.rerun()
+    else:
+        st.success("🎉 Session Completed!")
+        if st.button("Start New Session"):
+            st.session_state.session = None
+            st.session_state.index = 0
+            st.session_state.answer_input = ""
+            st.rerun()
 else:
-    st.warning("No items for this topic. Run seed first.")
-
-st.subheader("Progress graph")
-report = get_topic_report(USER_ID, topic_repo, mastery_repo)
-st.dataframe(report)
+    st.info("Click **Start Session** to begin.")
