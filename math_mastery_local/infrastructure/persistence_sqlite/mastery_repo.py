@@ -45,3 +45,9 @@ def update_mastery(topic_id, mastery, stability, due_at):
 
     conn.commit()
     conn.close()
+
+
+
+class MasteryRepository:
+    def get_mastery(self, topic_id):
+        return get_mastery(topic_id)
