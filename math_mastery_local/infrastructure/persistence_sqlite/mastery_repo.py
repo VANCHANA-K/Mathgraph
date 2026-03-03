@@ -47,7 +47,24 @@ def update_mastery(topic_id, mastery, stability, due_at):
     conn.close()
 
 
+def get_all_mastery():
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        """
+    SELECT topic_id, mastery, stability, due_at FROM mastery_state
+    """
+    )
+
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
 
 class MasteryRepository:
     def get_mastery(self, topic_id):
         return get_mastery(topic_id)
+
+    def get_all_mastery(self):
+        return get_all_mastery()
