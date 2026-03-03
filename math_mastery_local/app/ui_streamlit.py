@@ -7,6 +7,9 @@ base_path = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(base_path))
 
 from application.use_cases.generate_session import generate_session
+from application.use_cases.export_reports import export_attempts_csv, export_mastery_csv
+from application.use_cases.backup_db import backup_database
+from application.use_cases.session_summary import get_session_summary
 from application.use_cases.get_next_actions import get_next_actions
 from application.use_cases.seed_data import seed_items, seed_topics
 from application.use_cases.submit_attempt import submit_attempt
@@ -205,3 +208,38 @@ if plotly_available:
     st.plotly_chart(fig, use_container_width=True)
 else:
     st.warning("Plotly is not installed in this environment, so graph visualization is unavailable.")
+
+
+st.divider()
+st.header("📦 Export / Backup")
+
+root = Path(__file__).resolve().parents[1]
+reports_dir = root / "outputs" / "reports"
+backups_dir = root / "outputs" / "backups"
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    if st.button("Export Mastery CSV"):
+        out = export_mastery_csv(reports_dir)
+        st.success(f"Saved: {out.name}")
+
+with col2:
+    if st.button("Export Attempts CSV"):
+        out = export_attempts_csv(reports_dir, limit=5000)
+        st.success(f"Saved: {out.name}")
+
+with col3:
+    if st.button("Backup DB"):
+        out = backup_database(root, backups_dir)
+        st.success(f"Backup: {out.name}")
+
+st.divider()
+st.header("🧾 Session Summary (Recent)")
+
+summary = get_session_summary(recent_n=50)
+if summary["attempts"] == 0:
+    st.write("No attempts yet.")
+else:
+    st.write(f"Recent Attempts: {summary['attempts']}")
+    st.write(f"Recent Accuracy: {round(summary['accuracy'] * 100, 1)}%")

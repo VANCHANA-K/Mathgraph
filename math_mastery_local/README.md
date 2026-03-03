@@ -18,7 +18,8 @@ math_mastery_local/
 │  └─ graph_networkx/
 ├─ data/
 ├─ outputs/
-│  └─ reports/
+│  ├─ reports/
+│  └─ backups/
 └─ tests/
 ```
 
@@ -30,20 +31,18 @@ source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-## Run
+## Run (Local)
 
 ```bash
-python app/cli.py
+# path: math_mastery_local/
 streamlit run app/ui_streamlit.py
 ```
 
-## Day 1 Definition of Done
+## Outputs
 
-- [x] Folder structure created
-- [x] Virtual environment command documented
-- [ ] `pip install -r requirements.txt` completed in local machine
-- [x] `README.md` + `.gitignore` prepared
-
+- `outputs/reports/` : mastery and attempts exports (CSV)
+- `outputs/backups/` : SQLite database backups
+- database file: `mastery.db`
 
 ## Day 3 readiness
 
